@@ -103,6 +103,8 @@ function App() {
   const [frame, setFrame] = useState<FrameState>(() => freshFrame());
   const [frameNumber, setFrameNumber] = useState(1);
   const [setupOpen, setSetupOpen] = useState(true);
+  const [welcomeOpen, setWelcomeOpen] = useState(true);
+  const [redPotCount, setRedPotCount] = useState(2);
   const [undoFrames, setUndoFrames] = useState<FrameState[]>([]);
   const [saved, setSaved] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
@@ -127,9 +129,12 @@ function App() {
       if (!mounted) return;
       if (sessionError) setError(sessionError.message);
       setSession(data.session);
+      if (data.session) setWelcomeOpen(false);
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, currentSession) => {
       setSession(currentSession);
+      if (event === "SIGNED_IN") setWelcomeOpen(false);
+      if (event === "SIGNED_OUT") setWelcomeOpen(true);
     });
     return () => {
       mounted = false;
@@ -245,17 +250,22 @@ function App() {
     updateFrame(next);
   }
 
-  function potTwoReds() {
-    if (frame.phase !== "red" || frame.redsRemaining < 2) return;
+  function potMultipleReds(count: number) {
+    if (
+      frame.phase !== "red" ||
+      !Number.isInteger(count) ||
+      count < 2 ||
+      count > frame.redsRemaining
+    ) return;
     const next = {
       ...frame,
       scores: [...frame.scores] as [number, number],
       highBreaks: [...frame.highBreaks] as [number, number],
     };
-    next.scores[next.active] += 2;
-    next.break += 2;
+    next.scores[next.active] += count;
+    next.break += count;
     next.highBreaks[next.active] = Math.max(next.highBreaks[next.active], next.break);
-    next.redsRemaining -= 2;
+    next.redsRemaining -= count;
     next.phase = "colour";
     updateFrame(next);
   }
@@ -301,6 +311,7 @@ function App() {
     setSaved(false);
     setMessage("");
     setSetupOpen(true);
+    setRedPotCount(2);
   }
 
   function beginFrame() {
@@ -418,6 +429,7 @@ function App() {
     setAuthEmail("");
     setAuthPassword("");
     setAuthMode("signin");
+    setWelcomeOpen(false);
   }
 
   async function signOut() {
@@ -427,6 +439,7 @@ function App() {
     else {
       setAccount(null);
       setTab("score");
+      setWelcomeOpen(true);
       setMessage("Signed out. This frame will remain available until you leave.");
     }
   }
@@ -696,11 +709,30 @@ function App() {
                   ))}
                 </div>
                 {frame.phase === "red" && frame.redsRemaining >= 2 && (
-                  <button className="double-red-action" onClick={potTwoReds}>
+                  <div className="multi-red-action">
                     <span className="double-red-balls"><i /><i /></span>
-                    <span><strong>Pot two reds</strong><small>Both reds count · +2 points</small></span>
-                    <ArrowRight size={15} />
-                  </button>
+                    <div className="multi-red-copy">
+                      <strong>Pot multiple reds</strong>
+                      <small>Each red scores 1 point · next shot is a colour</small>
+                    </div>
+                    <label className="visually-hidden" htmlFor="red-pot-count">Number of reds potted</label>
+                    <select
+                      id="red-pot-count"
+                      className="red-count-select"
+                      value={Math.min(redPotCount, frame.redsRemaining)}
+                      onChange={(event) => setRedPotCount(Number(event.target.value))}
+                    >
+                      {Array.from({ length: frame.redsRemaining - 1 }, (_, index) => index + 2).map((count) => (
+                        <option key={count} value={count}>{count} reds</option>
+                      ))}
+                    </select>
+                    <button
+                      className="button button-outline multi-red-button"
+                      onClick={() => potMultipleReds(Math.min(redPotCount, frame.redsRemaining))}
+                    >
+                      Pot {Math.min(redPotCount, frame.redsRemaining)} <ArrowRight size={14} />
+                    </button>
+                  </div>
                 )}
                 <div className="table-rule">
                   <span className="rule-icon"><CircleHelp size={14} /></span>
@@ -848,6 +880,10 @@ function App() {
               <p>Choose your players, then see who's breaking off this frame.</p>
             </div>
             <div className="setup-table-wrap" aria-label="Illustration of a snooker table set for the break">
+              <div className="table-break-overlay" role="status" aria-live="polite">
+                <span><i className="break-indicator" /> ON THE BREAK</span>
+                <strong>{frame.players[frame.breaker].trim() || `Player ${frame.breaker + 1}`}</strong>
+              </div>
               <svg className="setup-table" viewBox="0 0 1200 590" role="img" aria-labelledby="table-title table-desc">
                 <title id="table-title">Snooker table set for the break</title>
                 <desc id="table-desc">The cue ball is placed in the D. Fifteen reds form a triangle at the far end with the colours on their spots.</desc>
@@ -933,6 +969,82 @@ function App() {
             </section>
             <div className="setup-footnote"><RotateCcw size={13} /> The opening break switches players every frame.</div>
           </div>
+        </div>
+      )}
+
+      {welcomeOpen && !session && (
+        <div className="welcome-screen">
+          <header className="welcome-topbar">
+            <a className="brand" href="#" onClick={(event) => event.preventDefault()}>
+              <span className="brand-mark"><span /></span>
+              <span>snooker<span className="brand-light">mate</span><small>THE CLUBHOUSE</small></span>
+            </a>
+            <span className="welcome-edition"><i /> YOUR NEXT FRAME STARTS HERE</span>
+          </header>
+          <main className="welcome-content">
+            <div className="welcome-copy">
+              <div className="eyebrow"><span className="eyebrow-line" /> A BETTER WAY TO KEEP SCORE</div>
+              <h1>Settle in.<br /><em>Take your shot.</em></h1>
+              <p>Track every frame, every break, every point. Play on your own or keep your whole club's scorebook close.</p>
+              <div className="welcome-actions">
+                <button
+                  className="button button-turn welcome-primary"
+                  onClick={() => { setAuthMode("signup"); setAuthOpen(true); setError(""); }}
+                >
+                  Create your account <ArrowRight size={16} />
+                </button>
+                <button
+                  className="button button-outline welcome-login"
+                  onClick={() => { setAuthMode("signin"); setAuthOpen(true); setError(""); }}
+                >
+                  <LogIn size={15} /> Log in
+                </button>
+              </div>
+              <div className="welcome-divider"><span /> OR JUST GET ON THE TABLE <span /></div>
+              <button className="welcome-guest" onClick={() => setWelcomeOpen(false)}>
+                <UserRound size={16} /> Continue as guest <ArrowRight size={15} />
+              </button>
+              <small className="welcome-guest-note">No account needed. Guest games stay on this device while you play.</small>
+            </div>
+            <div className="welcome-visual">
+              <div className="welcome-table-glow" />
+              <svg className="welcome-table-art" viewBox="0 0 900 620" role="img" aria-labelledby="welcome-table-title">
+                <title id="welcome-table-title">A snooker table ready for a frame</title>
+                <defs>
+                  <linearGradient id="welcome-wood" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#8a6344" /><stop offset=".45" stopColor="#4d3626" /><stop offset="1" stopColor="#291e16" />
+                  </linearGradient>
+                  <linearGradient id="welcome-felt" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#2b8051" /><stop offset=".55" stopColor="#1f613e" /><stop offset="1" stopColor="#17442e" />
+                  </linearGradient>
+                  <radialGradient id="welcome-ball-red"><stop offset="0" stopColor="#f4867d" /><stop offset="1" stopColor="#9d252e" /></radialGradient>
+                  <filter id="welcome-shadow" x="-.2" y="-.2" width="1.4" height="1.5"><feDropShadow dx="0" dy="18" stdDeviation="16" floodColor="#000" floodOpacity=".5" /></filter>
+                </defs>
+                <g filter="url(#welcome-shadow)">
+                  <rect x="36" y="37" width="828" height="546" rx="34" fill="url(#welcome-wood)" stroke="#a87d55" strokeWidth="4" />
+                  <rect x="72" y="73" width="756" height="474" rx="21" fill="#101f15" stroke="#28372a" strokeWidth="5" />
+                  <rect x="91" y="92" width="718" height="436" rx="14" fill="url(#welcome-felt)" stroke="#d1a475" strokeOpacity=".75" strokeWidth="3" />
+                  <path d="M91 310H809" stroke="#e7eadb" strokeOpacity=".28" strokeWidth="2" />
+                  <path d="M240 92V528M240 193A117 117 0 0 0 240 427" fill="none" stroke="#e7eadb" strokeOpacity=".66" strokeWidth="2" />
+                  {[["91","92"],["450","92"],["809","92"],["91","528"],["450","528"],["809","528"]].map(([x,y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="21" fill="#09100b" stroke="#a77c55" strokeWidth="4" />)}
+                  <circle cx="240" cy="310" r="7" fill="#d3b27d" />
+                  <circle cx="450" cy="310" r="10" fill="#5d91c1" />
+                  <circle cx="576" cy="310" r="9" fill="#dc9eb4" />
+                  <circle cx="673" cy="310" r="9" fill="#202621" stroke="#c8d0c1" strokeOpacity=".55" strokeWidth="2" />
+                  <circle cx="164" cy="310" r="12" fill="#f2f0e8" />
+                  {[[698,310],[716,300],[716,320],[734,290],[734,310],[734,330],[752,280],[752,300],[752,320],[752,340],[770,270],[770,290],[770,310],[770,330],[770,350]].map(([x,y],i) => <circle key={i} cx={x} cy={y} r="7" fill="url(#welcome-ball-red)" stroke="#f9b1a4" strokeOpacity=".4" />)}
+                </g>
+              </svg>
+              <div className="welcome-visual-caption"><span>15 REDS</span><i /><span>ONE TABLE</span><i /><span>YOUR FRAME</span></div>
+              <div className="welcome-floating-ball welcome-floating-red" />
+              <div className="welcome-floating-ball welcome-floating-blue" />
+              <div className="welcome-floating-ball welcome-floating-white" />
+            </div>
+          </main>
+          <footer className="welcome-footer">
+            <span><i className="welcome-online-dot" /> BUILT FOR THE LOVE OF THE GAME</span>
+            <button onClick={() => { setAuthMode("admin"); setAuthOpen(true); setError(""); }}>Administrator sign in <ArrowRight size={13} /></button>
+          </footer>
         </div>
       )}
 

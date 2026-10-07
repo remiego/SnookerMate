@@ -1,6 +1,6 @@
 # SnookerMate
 
-SnookerMate is a React + TypeScript snooker scorekeeper. Play a frame without an account, or connect Supabase to register, save player profiles and keep match history. Supabase row-level security protects user-owned data and gives administrators access to all profiles and matches.
+SnookerMate is a React + TypeScript snooker scorekeeper. Start by signing in, creating an account, or continuing as a guest. Guests can play locally without saving data; registered users can save player profiles and match history. Supabase row-level security protects user-owned data and gives administrators access to all profiles and matches.
 
 ## Run locally
 
@@ -23,7 +23,7 @@ Only use the Supabase project URL and anon/publishable key in this client-side a
 
 ## Scoring
 
-Each frame opens with a full-screen table setup. Choose player names or saved profiles to see who breaks off; the opening break alternates between the two players each new frame. The scorer enforces the standard sequence: red, nominated colour, repeat while reds remain, then the colour clearance from yellow through black. Use **Pot two reds** to record two reds potted in one shot; they score two points and the next shot is a colour. The foul control awards the standard minimum of four points to the opponent and passes the turn. Use End frame to save the current score at any time. Anonymous frames are not saved.
+Each frame opens with a full-screen table setup. Choose player names or saved profiles to see who breaks off; the opening break alternates between the two players each new frame. The scorer enforces the standard sequence: red, nominated colour, repeat while reds remain, then the colour clearance from yellow through black. Use **Pot multiple reds** to record two or more reds potted in one shot; each scores one point, and the next shot is a colour. The foul control awards the standard minimum of four points to the opponent and passes the turn. Use End frame to save the current score at any time. Anonymous frames are not saved.
 
 ## Database access
 
