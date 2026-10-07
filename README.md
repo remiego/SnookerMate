@@ -13,6 +13,14 @@ SnookerMate is a React + TypeScript snooker scorekeeper. Play a frame without an
 
 Without Supabase credentials, the frame scorer works as an anonymous, in-memory game; accounts, profiles, and saved history require Supabase.
 
+## Deploy with Vercel
+
+1. Import this GitHub repository into Vercel and keep the Vite framework preset. The checked-in `vercel.json` configures `npm run build` and publishes the `dist` output directory.
+2. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the Vercel project's environment variables for Production and Preview (and Development if desired). Redeploy after changing environment variables.
+3. In Supabase Authentication settings, set the production site URL to your deployed domain and add the production and Vercel Preview URLs to the allowed redirect URLs.
+
+Only use the Supabase project URL and anon/publishable key in this client-side app. Never add the Supabase service-role key to Vercel client environment variables.
+
 ## Scoring
 
 The scorer enforces the standard sequence: red, nominated colour, repeat while reds remain, then the colour clearance from yellow through black. The foul control awards the standard minimum of four points to the opponent and passes the turn. Use End frame to save the current score at any time. Anonymous frames are not saved.
