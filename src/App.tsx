@@ -41,7 +41,6 @@ type FrameState = {
   scores: [number, number];
   highBreaks: [number, number];
   active: 0 | 1;
-  breaker: 0 | 1;
   break: number;
   redsRemaining: number;
   phase: "red" | "colour" | "clearance" | "complete";
@@ -69,16 +68,12 @@ const colourValues: Record<number, string> = {
   7: "Black",
 };
 
-function freshFrame(
-  players: [string, string] = ["Player One", "Player Two"],
-  breaker: 0 | 1 = 0,
-): FrameState {
+function freshFrame(players: [string, string] = ["Player One", "Player Two"]): FrameState {
   return {
     players,
     scores: [0, 0],
     highBreaks: [0, 0],
-    active: breaker,
-    breaker,
+    active: 0,
     break: 0,
     redsRemaining: 15,
     phase: "red",
@@ -101,15 +96,13 @@ function App() {
   const [matches, setMatches] = useState<MatchRecord[]>([]);
   const [tab, setTab] = useState<Tab>("score");
   const [frame, setFrame] = useState<FrameState>(() => freshFrame());
-  const [frameNumber, setFrameNumber] = useState(1);
-  const [setupOpen, setSetupOpen] = useState(true);
   const [undoFrames, setUndoFrames] = useState<FrameState[]>([]);
   const [saved, setSaved] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"signin" | "signup" | "admin">("signin");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [authBusy, setAuthBusy] = useState(false);
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -245,21 +238,6 @@ function App() {
     updateFrame(next);
   }
 
-  function potTwoReds() {
-    if (frame.phase !== "red" || frame.redsRemaining < 2) return;
-    const next = {
-      ...frame,
-      scores: [...frame.scores] as [number, number],
-      highBreaks: [...frame.highBreaks] as [number, number],
-    };
-    next.scores[next.active] += 2;
-    next.break += 2;
-    next.highBreaks[next.active] = Math.max(next.highBreaks[next.active], next.break);
-    next.redsRemaining -= 2;
-    next.phase = "colour";
-    updateFrame(next);
-  }
-
   function changeTurn() {
     updateFrame({
       ...frame,
@@ -295,26 +273,9 @@ function App() {
 
   function startNewFrame() {
     setUndoFrames([]);
-    const nextBreaker = frame.breaker === 0 ? 1 : 0;
-    setFrame(freshFrame(frame.players, nextBreaker));
-    setFrameNumber((number) => number + 1);
+    setFrame(freshFrame(frame.players));
     setSaved(false);
     setMessage("");
-    setSetupOpen(true);
-  }
-
-  function beginFrame() {
-    if (!frame.players[0].trim() || !frame.players[1].trim()) {
-      setError("Enter a name for both players to start the frame.");
-      return;
-    }
-    setFrame({
-      ...frame,
-      players: [frame.players[0].trim(), frame.players[1].trim()],
-    });
-    setUndoFrames([]);
-    setError("");
-    setSetupOpen(false);
   }
 
   async function saveFrame() {
@@ -364,8 +325,7 @@ function App() {
     if (!supabase) return;
     setAuthBusy(true);
     setError("");
-    const mode = authMode;
-    const result = mode === "signup"
+    const result = authMode === "signup"
       ? await supabase.auth.signUp({
           email: authEmail,
           password: authPassword,
@@ -375,49 +335,19 @@ function App() {
           email: authEmail,
           password: authPassword,
         });
+    setAuthBusy(false);
     if (result.error) {
-      setAuthBusy(false);
       setError(result.error.message);
       return;
     }
-    if (mode === "signup" && !result.data.session) {
-      setAuthBusy(false);
+    if (authMode === "signup" && !result.data.session) {
       setMessage("Check your email to confirm your new account, then sign in.");
       setAuthOpen(false);
       return;
     }
-
-    if (mode === "admin") {
-      const userId = result.data.user?.id;
-      if (!userId) {
-        setAuthBusy(false);
-        setError("Unable to verify this account. Please try again.");
-        return;
-      }
-      const { data: profile, error: profileError } = await supabase
-        .from("account_profiles")
-        .select("id, display_name, role")
-        .eq("id", userId)
-        .single();
-      if (profileError || profile?.role !== "admin") {
-        const { error: signOutError } = await supabase.auth.signOut();
-        setAuthBusy(false);
-        setError(signOutError
-          ? `Admin access could not be verified, and sign-out failed: ${signOutError.message}`
-          : profileError
-            ? `Unable to verify admin access: ${profileError.message}`
-            : "This account does not have administrator access.");
-        return;
-      }
-      setAccount(profile as AccountProfile);
-      setTab("admin");
-    }
-
-    setAuthBusy(false);
     setAuthOpen(false);
     setAuthEmail("");
     setAuthPassword("");
-    setAuthMode("signin");
   }
 
   async function signOut() {
@@ -594,7 +524,7 @@ function App() {
           <div className="page-wrap">
             <section className="page-heading score-heading">
               <div>
-                <div className="eyebrow"><span className="eyebrow-line" /> TABLE 01 <span className="eyebrow-divider">/</span> FRAME {frameNumber.toString().padStart(2, "0")}</div>
+                <div className="eyebrow"><span className="eyebrow-line" /> TABLE 01 <span className="eyebrow-divider">/</span> PRACTICE FRAME</div>
                 <h1>The table is <em>yours.</em></h1>
                 <p className="heading-copy">Every point counts. Keep your eyes on the table.</p>
               </div>
@@ -607,7 +537,7 @@ function App() {
             <section className="scoreboard panel">
               <div className="scoreboard-top">
                 <div className="live-tag"><span /> {frame.phase === "complete" ? "FRAME COMPLETE" : "LIVE FRAME"}</div>
-                <div className="table-label">FRAME {frameNumber.toString().padStart(2, "0")} <span>·</span> PRACTICE</div>
+                <div className="table-label">FRAME 01 <span>·</span> BEST OF 1</div>
                 <button className="icon-button help-button" title="Score by tapping a legal ball, then pass the turn or call a foul." aria-label="Scoring help"><CircleHelp size={17} /></button>
               </div>
               <div className="scoreboard-players">
@@ -695,13 +625,6 @@ function App() {
                     </button>
                   ))}
                 </div>
-                {frame.phase === "red" && frame.redsRemaining >= 2 && (
-                  <button className="double-red-action" onClick={potTwoReds}>
-                    <span className="double-red-balls"><i /><i /></span>
-                    <span><strong>Pot two reds</strong><small>Both reds count · +2 points</small></span>
-                    <ArrowRight size={15} />
-                  </button>
-                )}
                 <div className="table-rule">
                   <span className="rule-icon"><CircleHelp size={14} /></span>
                   <p>{frame.phase === "red" ? "Pot a red, then choose any colour." : frame.phase === "colour" ? "A colour is on. The next shot is a red." : frame.phase === "clearance" ? "Clear the colours in order, from yellow to black." : "Frame complete. Save your score or start another frame."}</p>
@@ -832,134 +755,23 @@ function App() {
         <footer className="app-footer"><span>© SNOOKERMATE</span><span>MADE FOR THE LOVE OF THE GAME <span className="footer-dot">·</span> {isSupabaseConfigured ? "SUPABASE CONNECTED" : "LOCAL MODE"}</span></footer>
       </main>
 
-      {setupOpen && (
-        <div className="frame-setup">
-          <div className="setup-topbar">
-            <a className="brand" href="#" onClick={(event) => event.preventDefault()}>
-              <span className="brand-mark"><span /></span>
-              <span>snooker<span className="brand-light">mate</span><small>THE CLUBHOUSE</small></span>
-            </a>
-            <span className="setup-step">FRAME {frameNumber.toString().padStart(2, "0")} <span>/</span> SETUP</span>
-          </div>
-          <div className="setup-content">
-            <div className="setup-intro">
-              <div className="eyebrow"><span className="eyebrow-line" /> BEFORE THE BREAK</div>
-              <h1>Set the table.<br /> <em>Take your shot.</em></h1>
-              <p>Choose your players, then see who's breaking off this frame.</p>
-            </div>
-            <div className="setup-table-wrap" aria-label="Illustration of a snooker table set for the break">
-              <svg className="setup-table" viewBox="0 0 1200 590" role="img" aria-labelledby="table-title table-desc">
-                <title id="table-title">Snooker table set for the break</title>
-                <desc id="table-desc">The cue ball is placed in the D. Fifteen reds form a triangle at the far end with the colours on their spots.</desc>
-                <defs>
-                  <linearGradient id="wood" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0" stopColor="#775238" /><stop offset=".48" stopColor="#493322" /><stop offset="1" stopColor="#2c2118" />
-                  </linearGradient>
-                  <linearGradient id="felt" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0" stopColor="#27754b" /><stop offset=".55" stopColor="#1e603c" /><stop offset="1" stopColor="#17492f" />
-                  </linearGradient>
-                  <radialGradient id="cue"><stop offset="0" stopColor="#fff" /><stop offset="1" stopColor="#cbd3c4" /></radialGradient>
-                  <radialGradient id="red"><stop offset="0" stopColor="#ee7772" /><stop offset="1" stopColor="#a72e34" /></radialGradient>
-                  <filter id="table-shadow" x="-.1" y="-.1" width="1.2" height="1.3"><feDropShadow dx="0" dy="15" stdDeviation="14" floodColor="#000" floodOpacity=".45" /></filter>
-                </defs>
-                <g filter="url(#table-shadow)">
-                  <rect x="32" y="27" width="1136" height="536" rx="30" fill="url(#wood)" stroke="#97704c" strokeWidth="4" />
-                  <rect x="67" y="61" width="1066" height="468" rx="20" fill="#10261a" stroke="#1e3023" strokeWidth="5" />
-                  <rect x="87" y="81" width="1026" height="428" rx="13" fill="url(#felt)" stroke="#d0a46e" strokeOpacity=".75" strokeWidth="3" />
-                  <path d="M87 295H1113" fill="none" stroke="#d9e5c4" strokeOpacity=".26" strokeWidth="2" />
-                  <path d="M300 81V509" fill="none" stroke="#e6ead5" strokeOpacity=".72" strokeWidth="2" />
-                  <path d="M300 178A117 117 0 0 0 300 412" fill="none" stroke="#e6ead5" strokeOpacity=".72" strokeWidth="2" />
-                  {[["87","81"],["600","81"],["1113","81"],["87","509"],["600","509"],["1113","509"]].map(([x, y]) => (
-                    <circle key={`${x}-${y}`} cx={x} cy={y} r="24" fill="#0a120d" stroke="#b58a5d" strokeWidth="4" />
-                  ))}
-                  <circle cx="300" cy="295" r="7" fill="#d2b27d" />
-                  <circle cx="600" cy="295" r="9" fill="#558ac0" stroke="#e9f0e2" strokeOpacity=".52" strokeWidth="2" />
-                  <circle cx="790" cy="295" r="8" fill="#dc9cb3" stroke="#e9f0e2" strokeOpacity=".45" strokeWidth="2" />
-                  <circle cx="920" cy="295" r="8" fill="#232722" stroke="#dfe4d8" strokeOpacity=".5" strokeWidth="2" />
-                  <circle cx="192" cy="295" r="11" fill="url(#cue)" stroke="#fff" strokeOpacity=".75" strokeWidth="2" />
-                  {[
-                    [951, 295], [970, 284], [970, 306],
-                    [989, 273], [989, 295], [989, 317],
-                    [1008, 262], [1008, 284], [1008, 306], [1008, 328],
-                    [1027, 251], [1027, 273], [1027, 295], [1027, 317], [1027, 339],
-                  ].map(([x, y], index) => (
-                    <circle key={`red-${index}`} cx={x} cy={y} r="7.5" fill="url(#red)" stroke="#f7c0ac" strokeOpacity=".37" strokeWidth="1" />
-                  ))}
-                </g>
-              </svg>
-              <span className="table-caption"><i /> TABLE 01 <span>·</span> READY TO PLAY</span>
-            </div>
-            <section className="setup-controls">
-              <div className="setup-players">
-                {[0, 1].map((index) => {
-                  const playerIndex = index as 0 | 1;
-                  const breaks = frame.breaker === playerIndex;
-                  return (
-                    <div className={`setup-player ${breaks ? "setup-player-breaker" : ""}`} key={playerIndex}>
-                      <div className="setup-player-heading">
-                        <span className="setup-player-number">0{playerIndex + 1}</span>
-                        <span>{breaks ? <><i className="break-indicator" /> BREAKS OFF</> : "OPENS SECOND"}</span>
-                      </div>
-                      <select
-                        className="setup-profile-select"
-                        aria-label={`Choose saved profile for player ${playerIndex + 1}`}
-                        value={profiles.find((profile) => profile.name === frame.players[playerIndex])?.id ?? ""}
-                        onChange={(event) => {
-                          const profile = profiles.find((item) => item.id === event.target.value);
-                          if (profile) changePlayerName(playerIndex, profile.name);
-                        }}
-                      >
-                        <option value="">Choose a saved player</option>
-                        {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-                      </select>
-                      <input
-                        className="setup-player-name"
-                        aria-label={`Name for player ${playerIndex + 1}`}
-                        value={frame.players[playerIndex]}
-                        maxLength={60}
-                        onChange={(event) => changePlayerName(playerIndex, event.target.value)}
-                        placeholder={`Player ${playerIndex + 1}`}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="setup-break-card">
-                <div className="setup-break-label"><span className="break-indicator" /> THIS FRAME'S BREAK</div>
-                <strong>{frame.players[frame.breaker].trim() || `Player ${frame.breaker + 1}`}</strong>
-                <small>{frameNumber === 1 ? "First frame" : "Break alternates each frame"}</small>
-              </div>
-              <button className="button button-turn setup-start-button" onClick={beginFrame}>Start frame <ArrowRight size={16} /></button>
-            </section>
-            <div className="setup-footnote"><RotateCcw size={13} /> The opening break switches players every frame.</div>
-          </div>
-        </div>
-      )}
-
       {authOpen && (
         <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setAuthOpen(false); }}>
           <section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
             <button className="icon-button modal-close" onClick={() => setAuthOpen(false)} aria-label="Close"><X size={18} /></button>
             <div className="auth-brand-mark"><span /></div>
-            <div className="eyebrow"><span className="eyebrow-line" /> {authMode === "admin" ? "ADMINISTRATOR ACCESS" : "YOUR CLUBHOUSE"}</div>
-            <h2 id="auth-title">{authMode === "admin" ? "Admin sign in." : authMode === "signup" ? "Make yourself at home." : "Welcome back."}</h2>
-            <p>{authMode === "admin" ? "Sign in with your administrator account to manage profiles and matches." : authMode === "signup" ? "Create an account to save your players and match history." : "Sign in to pick up where you left off."}</p>
+            <div className="eyebrow"><span className="eyebrow-line" /> YOUR CLUBHOUSE</div>
+            <h2 id="auth-title">{authMode === "signup" ? "Make yourself at home." : "Welcome back."}</h2>
+            <p>{authMode === "signup" ? "Create an account to save your players and match history." : "Sign in to pick up where you left off."}</p>
             {!isSupabaseConfigured && <div className="auth-config-note">Supabase isn't configured yet. Add your project keys to <code>.env.local</code> to enable accounts.</div>}
             {error && <div className="auth-error">{error}</div>}
             <form onSubmit={(event) => void submitAuth(event)}>
               {authMode === "signup" && <label className="field"><span>YOUR NAME</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="How should we call you?" maxLength={60} required /></label>}
               <label className="field"><span>EMAIL ADDRESS</span><input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="you@example.com" required /></label>
               <label className="field"><span>PASSWORD</span><input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="At least 6 characters" minLength={6} required /></label>
-              <button className="button button-turn auth-submit" disabled={!isSupabaseConfigured || authBusy}>{authBusy ? "One moment…" : authMode === "signup" ? "Create your account" : authMode === "admin" ? "Admin sign in" : "Sign in"} <ArrowRight size={16} /></button>
+              <button className="button button-turn auth-submit" disabled={!isSupabaseConfigured || authBusy}>{authBusy ? "One moment…" : authMode === "signup" ? "Create your account" : "Sign in"} <ArrowRight size={16} /></button>
             </form>
-            {authMode === "admin" ? (
-              <div className="auth-switch">Not signing in as an admin? <button onClick={() => { setAuthMode("signin"); setError(""); }}>Regular sign in</button></div>
-            ) : (
-              <>
-                <div className="auth-switch">{authMode === "signup" ? "Already a member?" : "New around here?"} <button onClick={() => { setAuthMode(authMode === "signup" ? "signin" : "signup"); setError(""); }}>{authMode === "signup" ? "Sign in" : "Create an account"}</button></div>
-                <button className="auth-admin-link" onClick={() => { setAuthMode("admin"); setError(""); }}>Administrator? <span>Admin sign in</span> <ArrowRight size={13} /></button>
-              </>
-            )}
+            <div className="auth-switch">{authMode === "signup" ? "Already a member?" : "New around here?"} <button onClick={() => { setAuthMode(authMode === "signup" ? "signin" : "signup"); setError(""); }}>{authMode === "signup" ? "Sign in" : "Create an account"}</button></div>
           </section>
         </div>
       )}
