@@ -13,6 +13,10 @@ SnookerMate is a React + TypeScript snooker scorekeeper. Start by signing in, cr
 
 Without Supabase credentials, the frame scorer works as an anonymous, in-memory game; accounts, profiles, and saved history require Supabase.
 
+## Appearance
+
+Use the light/dark toggle on the welcome screen or app header to switch themes. The selected theme is saved in this browser and applies to the welcome screen, frame setup, scorekeeper, and account pages. The welcome screen and frame setup share a detailed, locally served snooker-table image.
+
 ## Deploy with Vercel
 
 1. Import this GitHub repository into Vercel and keep the Vite framework preset. The checked-in `vercel.json` configures `npm run build` and publishes the `dist` output directory.
