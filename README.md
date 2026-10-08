@@ -15,7 +15,7 @@ Without Supabase credentials, the frame scorer works as an anonymous, in-memory 
 
 ## Appearance
 
-Use the light/dark toggle on the welcome screen or app header to switch themes. The selected theme is saved in this browser and applies to the welcome screen, frame setup, scorekeeper, and account pages. The welcome screen and frame setup share a detailed, locally served snooker-table image.
+Use the light/dark toggle on the welcome screen or app header to switch themes. The selected theme is saved in this browser and applies to the welcome screen, frame setup, scorekeeper, and account pages.
 
 ## Deploy with Vercel
 

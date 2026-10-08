@@ -903,18 +903,6 @@ function App() {
               <h1>Set the table.<br /> <em>Take your shot.</em></h1>
               <p>Choose your players, then see who's breaking off this frame.</p>
             </div>
-            <div className="setup-table-wrap">
-              <div className="table-break-overlay" role="status" aria-live="polite">
-                <span><i className="break-indicator" /> ON THE BREAK</span>
-                <strong>{frame.players[frame.breaker].trim() || `Player ${frame.breaker + 1}`}</strong>
-              </div>
-              <img
-                className="setup-table"
-                src="/snooker-table.png"
-                alt="Snooker table set for the break, with the cue ball in the D, all six colours on their spots, and fifteen reds in a triangle."
-              />
-              <span className="table-caption"><i /> TABLE 01 <span>·</span> READY TO PLAY</span>
-            </div>
             <section className="setup-controls">
               <div className="setup-players">
                 {[0, 1].map((index) => {
@@ -1001,18 +989,6 @@ function App() {
                 <UserRound size={16} /> Continue as guest <ArrowRight size={15} />
               </button>
               <small className="welcome-guest-note">No account needed. Guest games stay on this device while you play.</small>
-            </div>
-            <div className="welcome-visual">
-              <div className="welcome-table-glow" />
-              <img
-                className="welcome-table-art"
-                src="/snooker-table.png"
-                alt="Snooker table ready for a frame, with six pockets and a full set of coloured balls."
-              />
-              <div className="welcome-visual-caption"><span>15 REDS</span><i /><span>ONE TABLE</span><i /><span>YOUR FRAME</span></div>
-              <div className="welcome-floating-ball welcome-floating-red" />
-              <div className="welcome-floating-ball welcome-floating-blue" />
-              <div className="welcome-floating-ball welcome-floating-white" />
             </div>
           </main>
           <footer className="welcome-footer">
