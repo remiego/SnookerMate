@@ -274,6 +274,8 @@ h1 em { color: var(--lime); font-style: normal; }
 .button-foul { color: #e4b8a9; background: rgba(180, 87, 64, .09); border: 1px solid rgba(200, 112, 89, .2); }
 .button-foul:hover:not(:disabled) { background: rgba(180,87,64,.18); }
 .foul-icon { width: 15px; height: 15px; display: grid; place-items: center; border: 1px solid rgba(228,184,169,.65); border-radius: 50%; font: 500 10px var(--mono); }
+.foul-points-select { min-height: 31px; padding: 0 5px; color: #e4b8a9; background: rgba(180,87,64,.09); border: 1px solid rgba(200,112,89,.2); border-radius: 4px; font-size: 9px; }
+.foul-points-select option { color: #e7ede3; background: #18231b; }
 .button-save { width: 100%; min-height: 34px; margin-top: 12px; color: #1d2919; background: #bedf87; border: 0; font-size: 10px; }
 .button-save:hover:not(:disabled) { background: #d0eca0; }
 .button-save:disabled { opacity: .65; }
