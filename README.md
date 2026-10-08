@@ -27,7 +27,7 @@ Only use the Supabase project URL and anon/publishable key in this client-side a
 
 ## Scoring
 
-Each frame opens with a full-screen table setup. Choose player names or saved profiles to see who breaks off; the opening break alternates between the two players each new frame. The scorer enforces the standard sequence: red, nominated colour, repeat while reds remain, then the colour clearance from yellow through black. Use **Pot multiple reds** to record two or more reds potted in one shot; each scores one point, and the next shot is a colour. The foul control awards the standard minimum of four points to the opponent and passes the turn. Use End frame to save the current score at any time. Anonymous frames are not saved.
+Each frame opens with a full-screen table setup. Choose player names or saved profiles to see who breaks off; the opening break alternates between the two players each new frame. The scorer enforces the standard sequence: red, nominated colour, repeat while reds remain, then the colour clearance from yellow through black. Use **Pot multiple reds** to record two or more reds potted in one shot; each scores one point, and the next shot is a colour. Choose a foul penalty from 4 to 7 points before using **Foul**; the points go to the opponent and the turn passes. Use End frame to save the current score at any time. Anonymous frames are not saved.
 
 ## Database access
 

@@ -111,6 +111,7 @@ function App() {
   const [setupOpen, setSetupOpen] = useState(true);
   const [welcomeOpen, setWelcomeOpen] = useState(true);
   const [redPotCount, setRedPotCount] = useState(2);
+  const [foulPoints, setFoulPoints] = useState(4);
   const [undoFrames, setUndoFrames] = useState<FrameState[]>([]);
   const [saved, setSaved] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
@@ -301,7 +302,7 @@ function App() {
   function callFoul() {
     const opponent = frame.active === 0 ? 1 : 0;
     const next = { ...frame, scores: [...frame.scores] as [number, number] };
-    next.scores[opponent] += 4;
+    next.scores[opponent] += foulPoints;
     next.active = opponent;
     next.break = 0;
     updateFrame(next);
@@ -700,7 +701,17 @@ function App() {
                   <button className="button button-quiet undo-button" onClick={undo} disabled={!undoFrames.length}><RotateCcw size={15} /> Undo</button>
                   {frame.phase !== "complete" ? (
                     <>
-                      <button className="button button-foul" onClick={callFoul}><span className="foul-icon">!</span> Foul +4</button>
+                      <label className="visually-hidden" htmlFor="foul-points">Foul penalty</label>
+                      <select
+                        id="foul-points"
+                        className="foul-points-select"
+                        value={foulPoints}
+                        onChange={(event) => setFoulPoints(Number(event.target.value))}
+                        aria-label="Foul penalty points"
+                      >
+                        {[4, 5, 6, 7].map((points) => <option key={points} value={points}>{points} points</option>)}
+                      </select>
+                      <button className="button button-foul" onClick={callFoul}><span className="foul-icon">!</span> Foul +{foulPoints}</button>
                       {!session && <button className="button button-outline" onClick={() => void saveFrame()}>End frame</button>}
                       <button className="button button-turn" onClick={changeTurn}>Pass turn <ArrowRight size={15} /></button>
                     </>
